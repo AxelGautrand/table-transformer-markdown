@@ -683,6 +683,7 @@ def cells_to_markdown(cells):
         column_nums = cell["column_nums"]
         cell_text = cell["cell text"]
         spans = cell["spans"]
+        is_header = cell["column header"]
 
         # If row or column numbers are not present, ignore this cell
         if not row_nums or not column_nums:
@@ -695,7 +696,9 @@ def cells_to_markdown(cells):
         # Add cell text to the dictionary
         if row_num not in table_data:
             table_data[row_num] = {}
-        table_data[row_num][column_num] = cell_text
+        table_data[row_num][column_num] = (
+            cell_text if (not is_header or cell_text == "") else f"**{cell_text}**"
+        )
 
         # Handle cells that span multiple rows or columns (spans)
         for span in spans:
@@ -703,16 +706,29 @@ def cells_to_markdown(cells):
                 for span_col in range(column_num, column_num + span["colspan"]):
                     if span_row not in table_data:
                         table_data[span_row] = {}
-                    table_data[span_row][span_col] = cell_text
+                    table_data[span_row][span_col] = (
+                        cell_text
+                        if (not is_header or cell_text == "")
+                        else f"**{cell_text}**"
+                    )
 
     # Build the Markdown table data
     markdown_table = ""
+    headers_added = False
     for row_num, row_data in sorted(table_data.items()):
         markdown_row = "|"
         for col_num in sorted(row_data.keys()):
             cell_text = row_data[col_num]
             markdown_row += f" {cell_text} |"
         markdown_table += markdown_row + "\n"
+
+        # Add a line below the first row
+        if not headers_added:
+            markdown_table += "|"
+            for _ in sorted(row_data.keys()):
+                markdown_table += "-------|"
+            markdown_table += "\n"
+            headers_added = True
 
     return markdown_table
 

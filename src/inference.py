@@ -662,6 +662,61 @@ def cells_to_html(cells):
     return str(ET.tostring(table, encoding="unicode", short_empty_elements=False))
 
 
+def cells_to_markdown(cells):
+    """
+    Generate Markdown table data from cells.
+
+    Parameters
+    ----------
+    cells : List type, cells extracted from structure_to_cells() method.
+
+    Returns
+    -------
+    str
+        Markdown table data.
+
+    """
+    # Create a dictionary to organize cells by row and column
+    table_data = {}
+    for cell in cells:
+        row_nums = cell["row_nums"]
+        column_nums = cell["column_nums"]
+        cell_text = cell["cell text"]
+        spans = cell["spans"]
+
+        # If row or column numbers are not present, ignore this cell
+        if not row_nums or not column_nums:
+            continue
+
+        # Take the first row and column number
+        row_num = row_nums[0]
+        column_num = column_nums[0]
+
+        # Add cell text to the dictionary
+        if row_num not in table_data:
+            table_data[row_num] = {}
+        table_data[row_num][column_num] = cell_text
+
+        # Handle cells that span multiple rows or columns (spans)
+        for span in spans:
+            for span_row in range(row_num, row_num + span["rowspan"]):
+                for span_col in range(column_num, column_num + span["colspan"]):
+                    if span_row not in table_data:
+                        table_data[span_row] = {}
+                    table_data[span_row][span_col] = cell_text
+
+    # Build the Markdown table data
+    markdown_table = ""
+    for row_num, row_data in sorted(table_data.items()):
+        markdown_row = "|"
+        for col_num in sorted(row_data.keys()):
+            cell_text = row_data[col_num]
+            markdown_row += f" {cell_text} |"
+        markdown_table += markdown_row + "\n"
+
+    return markdown_table
+
+
 def visualize_detected_tables(img, det_tables, out_path):
     plt.imshow(img, interpolation="lanczos")
     plt.gcf().set_size_inches(20, 20)
@@ -754,7 +809,7 @@ def visualize_detected_tables(img, det_tables, out_path):
     return
 
 
-def visualize_cells(img, cells, out_path):
+def visualize_cells(img, cells):
     plt.imshow(img, interpolation="lanczos")
     plt.gcf().set_size_inches(20, 20)
     ax = plt.gca()
@@ -851,7 +906,8 @@ def visualize_cells(img, cells, out_path):
     )
     plt.gcf().set_size_inches(10, 10)
     plt.axis("off")
-    plt.savefig(out_path, bbox_inches="tight", dpi=150)
+    # plt.savefig(out_path, bbox_inches="tight", dpi=150)
+    plt.show()
     plt.close()
 
     return

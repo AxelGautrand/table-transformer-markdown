@@ -8,6 +8,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.patches import Patch
+import pytesseract
 
 from pathlib import Path, PurePath
 
@@ -224,3 +225,50 @@ def plot_structure(outputs, objects=["table row", "table column"]):
         plt.close()
 
     return
+
+
+def crop_images_with_annotations(image, annotations):
+    """
+    Crop cells images from annotations extracted from structure_to_cells(). Useful to perform OCR using tesseract for example.
+
+    Parameters
+    ----------
+    image : PIL image type, image of the cropped table.
+    annotations : List type, annotations of the cells extracted from structure_to_cells() method.
+    """
+    cropped_images = []
+    for annotation in annotations:
+        # Get bbox coordinates
+        x_min, y_min, x_max, y_max = annotation["bbox"]
+
+        # Convert to integers
+        x_min, y_min, x_max, y_max = int(x_min), int(y_min), int(x_max), int(y_max)
+
+        # Crop the images
+        cropped_image = image.crop((x_min, y_min, x_max, y_max))
+
+        # Add to the images list
+        cropped_images.append(cropped_image)
+
+    return cropped_images
+
+
+def perform_ocr_on_images(cropped_images, annotations):
+    """
+    Perform ocr on cells using tesseract.
+
+    Parameters
+    ----------
+    cropped_images : List type, list of the cells PIL image cropped from the table
+    annotations : List type, annotations of the cells extracted from structure_to_cells() method.
+    """
+    for cropped_image, annotation in zip(cropped_images, annotations):
+        # Check is empty
+        if annotation["cell text"] == "":
+            # Apply OCR with tesseract
+            ocr_result = pytesseract.image_to_string(cropped_image, lang="eng")
+
+            # Update cell text field
+            annotation["cell text"] = ocr_result.strip()
+
+    return annotations
